@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Award Flight Finder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede9;
+      --text: #1a1a1a; --text2: #6b6b6b; --text3: #aaa;
+      --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+      --radius: 8px; --radius-lg: 12px;
+      --green-bg: #EAF3DE; --green-text: #3B6D11; --green-dark: #0F6E56;
+      --amber-text: #854F0B; --red-text: #A32D2D;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1e1e1c; --bg2: #2a2a28; --bg3: #333331;
+        --text: #f0efe9; --text2: #a0a09a; --text3: #666;
+        --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+        --green-bg: #173404; --green-text: #97C459; --green-dark: #C0DD97;
+        --amber-text: #FAC775; --red-text: #F09595;
+      }
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: var(--text2); margin-bottom: 1.5rem; }
+
+    /* Search bar */
+    .search-bar { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 1rem; }
+    .field label { font-size: 11px; color: var(--text2); letter-spacing: .05em; text-transform: uppercase; display: block; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 8px 10px; font-size: 14px; background: var(--bg2); color: var(--text); font-family: inherit; }
+    .field input:focus, .field select:focus { outline: 2px solid rgba(0,0,0,0.2); outline-offset: 1px; }
+    .search-btn { background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); padding: 9px 22px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .search-btn:hover { opacity: .82; }
+
+    /* Summary strip */
+    .summary-strip { display: none; gap: 10px; margin-bottom: .75rem; }
+    .summary-strip.visible { display: flex; }
+    .stat { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: .65rem 1rem; flex: 1; }
+    .stat-val { font-size: 20px; font-weight: 600; }
+    .stat-lbl { font-size: 11px; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+
+    /* Controls */
+    .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; flex-wrap: wrap; gap: 8px; }
+    .program-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 5px 12px; font-size: 12px; cursor: pointer; background: var(--bg); color: var(--text2); display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: all .15s; }
+    .tab:hover { border-color: var(--border2); color: var(--text); }
+    .tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .tab .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sort-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+    .sort-row select { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 5px 8px; font-size: 12px; background: var(--bg); color: var(--text); font-family: inherit; }
+
+    /* Results */
+    .results-header { display: grid; grid-template-columns: 2fr 1fr 1.4fr 1.4fr 1.4fr 1fr; gap: 0; border-bottom: 0.5px solid var(--border); padding: 6px 1.25rem; font-size: 11px; color: var(--text2); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 4px; }
+    .result-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: .9rem 1.25rem; display: grid; grid-template-columns: 2fr 1fr 1.4fr 1.4fr 1.4fr 1fr; gap: 0; align-items: center; margin-bottom: 6px; transition: border-color .15s; }
+    .result-card:hover { border-color: var(--border2); }
+    .result-card.best { border-left: 2px solid #1D9E75; }
+    .airline-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+    .route-detail { font-size: 12px; color: var(--text2); }
+    .stops-badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 3px; margin-left: 5px; background: var(--bg2); color: var(--text2); }
+    .stops-badge.nonstop { background: var(--green-bg); color: var(--green-text); }
+    .best-badge { font-size: 10px; padding: 2px 7px; border-radius: 3px; background: var(--green-bg); color: var(--green-text); font-weight: 500; display: inline-block; margin-bottom: 4px; }
+    .duration-col { font-size: 13px; color: var(--text2); }
+    .price-col { font-size: 14px; font-weight: 500; }
+    .price-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+    .price-na { font-size: 13px; color: var(--text3); }
+    .avail-high .avail-dot { background: #1D9E75; } .avail-high .avail-label { color: var(--green-dark); }
+    .avail-med .avail-dot { background: #BA7517; } .avail-med .avail-label { color: var(--amber-text); }
+    .avail-low .avail-dot { background: #E24B4A; } .avail-low .avail-label { color: var(--red-text); }
+    .avail-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .avail-label { font-size: 12px; }
+    .book-btn { font-size: 12px; padding: 5px 12px; cursor: pointer; border: 0.5px solid var(--border2); border-radius: var(--radius); background: transparent; color: var(--text); font-family: inherit; }
+    .book-btn:hover { background: var(--bg2); }
+    .empty { text-align: center; padding: 3rem; color: var(--text2); font-size: 14px; background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
+    @media (max-width: 680px) {
+      .search-bar { grid-template-columns: 1fr 1fr; }
+      .results-header, .result-card { grid-template-columns: 2fr 1fr 1fr 1fr; }
+      .col-hide { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Award Flight Finder</h1>
+  <p class="subtitle">Compare cash prices vs. miles across all major loyalty programs</p>
+
+  <div class="search-bar">
+    <div class="field"><label>From</label><input id="from" value="BOM" placeholder="City or airport"/></div>
+    <div class="field"><label>To</label><input id="to" value="JFK" placeholder="City or airport"/></div>
+    <div class="field"><label>Depart</label><input id="dep" type="date" value="2026-05-15"/></div>
+    <div class="field"><label>Cabin</label>
+      <select id="cabin">
+        <option value="economy">Economy</option>
+        <option value="premium">Premium Economy</option>
+        <option value="business" selected>Business</option>
+        <option value="first">First</option>
+      </select>
+    </div>
+    <button class="search-btn" onclick="doSearch()">Search</button>
+  </div>
+
+  <div class="summary-strip" id="summaryStrip"></div>
+
+  <div class="controls">
+    <div class="program-tabs" id="programTabs"></div>
+    <div class="sort-row">
+      Sort by
+      <select id="sortBy" onchange="renderResults()">
+        <option value="cash">Cash price</option>
+        <option value="points">Fewest miles</option>
+        <option value="duration">Duration</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="resultsWrap"></div>
+</div>
+
+<script>
+const PROGRAMS = [
+  { id: 'all', label: 'All flights', color: '#888' },
+  { id: 'cash', label: 'Cash', color: '#378ADD' },
+  { id: 'united', label: 'United MileagePlus', color: '#1B4F9B' },
+  { id: 'delta', label: 'Delta SkyMiles', color: '#E01933' },
+  { id: 'aa', label: 'AA AAdvantage', color: '#0078D2' },
+  { id: 'chase', label: 'Chase UR', color: '#115C97' },
+  { id: 'amex', label: 'Amex MR', color: '#016FD0' },
+  { id: 'air_india', label: 'Air India Flying Returns', color: '#C00' },
+];
+
+const FLIGHTS = [
+  { id: 1, airline: 'Air India', from: 'BOM', to: 'JFK', dep: '21:30', arr: '06:15+1', duration: '16h 45m', stops: 'nonstop', cabin: 'Business', cash: 2180, points: { united: 70000, delta: 95000, aa: 75000, air_india: 50000 }, avail: { united: 'high', delta: 'med', aa: 'high', air_india: 'high' }, best: true },
+  { id: 2, airline: 'Emirates', from: 'BOM', to: 'JFK', dep: '03:05', arr: '13:50+1', duration: '18h 45m', stops: '1 stop (DXB)', cabin: 'Business', cash: 3450, points: { chase: 88000, amex: 85000 }, avail: { chase: 'high', amex: 'high' }, best: false },
+  { id: 3, airline: 'Lufthansa', from: 'BOM', to: 'JFK', dep: '09:55', arr: '20:15+1', duration: '20h 20m', stops: '1 stop (FRA)', cabin: 'Business', cash: 2890, points: { united: 88000 }, avail: { united: 'med' }, best: false },
+  { id: 4, airline: 'British Airways', from: 'BOM', to: 'JFK', dep: '11:30', arr: '22:45+1', duration: '21h 15m', stops: '1 stop (LHR)', cabin: 'Business', cash: 3100, points: { aa: 70000 }, avail: { aa: 'low' }, best: false },
+  { id: 5, airline: 'Qatar Airways', from: 'BOM', to: 'JFK', dep: '02:25', arr: '14:30+1', duration: '22h 05m', stops: '1 stop (DOH)', cabin: 'Business', cash: 2650, points: { united: 70000, delta: 80000, aa: 70000 }, avail: { united: 'high', delta: 'high', aa: 'med' }, best: false },
+  { id: 6, airline: 'Air India', from: 'BOM', to: 'JFK', dep: '21:30', arr: '06:15+1', duration: '16h 45m', stops: 'nonstop', cabin: 'Business', cash: 2180, points: { chase: 70000, amex: 68000 }, avail: { chase: 'med', amex: 'high' }, best: false },
+];
+
+let activeProgram = 'all';
+
+function initTabs() {
+  const wrap = document.getElementById('programTabs');
+  wrap.innerHTML = '';
+  PROGRAMS.forEach(p => {
+    const t = document.createElement('div');
+    t.className = 'tab' + (p.id === activeProgram ? ' active' : '');
+    t.innerHTML = `<span class="dot" style="background:${p.color}"></span>${p.label}`;
+    t.onclick = () => { activeProgram = p.id; initTabs(); renderResults(); };
+    wrap.appendChild(t);
+  });
+}
+
+function bestPoints(f) {
+  if (activeProgram !== 'all' && activeProgram !== 'cash') return f.points[activeProgram] || null;
+  const vals = Object.values(f.points).filter(v => v != null);
+  return vals.length ? Math.min(...vals) : null;
+}
+
+function parseDur(s) {
+  const m = s.match(/(\d+)h\s*(\d+)m/);
+  return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : 999;
+}
+
+function getFlights() {
+  let flights = [...FLIGHTS];
+  if (activeProgram !== 'all' && activeProgram !== 'cash') {
+    flights = flights.filter(f => f.points[activeProgram] != null);
+  }
+  const sort = document.getElementById('sortBy').value;
+  flights.sort((a, b) => {
+    if (sort === 'cash') return a.cash - b.cash;
+    if (sort === 'duration') return parseDur(a.duration) - parseDur(b.duration);
+    const ap = bestPoints(a), bp = bestPoints(b);
+    if (ap == null && bp == null) return 0;
+    if (ap == null) return 1; if (bp == null) return -1;
+    return ap - bp;
+  });
+  return flights;
+}
+
+function availClass(l) { return l === 'high' ? 'avail-high' : l === 'med' ? 'avail-med' : 'avail-low'; }
+function availLabel(l) { return l === 'high' ? 'High' : l === 'med' ? 'Limited' : 'Rare'; }
+
+function renderAvail(f) {
+  const avls = activeProgram !== 'all' && activeProgram !== 'cash'
+    ? (f.avail[activeProgram] ? [[activeProgram, f.avail[activeProgram]]] : [])
+    : Object.entries(f.avail);
+  if (!avls.length) return '<span class="price-na">—</span>';
+  const best = avls.find(([, v]) => v === 'high') || avls.find(([, v]) => v === 'med') || avls[0];
+  return `<span class="${availClass(best[1])}"><span class="avail-dot"></span><span class="avail-label">${availLabel(best[1])}</span></span>`;
+}
+
+function renderResults() {
+  const flights = getFlights();
+  const wrap = document.getElementById('resultsWrap');
+  if (!flights.length) {
+    wrap.innerHTML = '<div class="empty">No award availability found for this program on this route.<br>Try a different loyalty program or date.</div>';
+    return;
+  }
+  const progLabel = activeProgram !== 'all' && activeProgram !== 'cash'
+    ? PROGRAMS.find(p => p.id === activeProgram)?.label : 'Best program';
+
+  let html = `<div class="results-header"><div>Flight</div><div>Duration</div><div>Cash price</div><div>${progLabel}</div><div class="col-hide">Availability</div><div>Action</div></div>`;
+
+  flights.forEach(f => {
+    const pts = bestPoints(f);
+    const cpp = pts ? (f.cash / pts * 100).toFixed(1) : null;
+    const bestProg = pts && (activeProgram === 'all')
+      ? Object.entries(f.points).find(([, v]) => v === pts)?.[0] : null;
+    const bestProgLabel = bestProg ? PROGRAMS.find(p => p.id === bestProg)?.label : progLabel;
+
+    html += `<div class="result-card${f.best && activeProgram === 'all' ? ' best' : ''}">
+      <div>
+        ${f.best && activeProgram === 'all' ? '<div class="best-badge">Best value</div>' : ''}
+        <div class="airline-name">${f.airline}<span class="stops-badge${f.stops === 'nonstop' ? ' nonstop' : ''}">${f.stops}</span></div>
+        <div class="route-detail">${f.from} ${f.dep} → ${f.to} ${f.arr} · ${f.cabin}</div>
+      </div>
+      <div class="duration-col">${f.duration}</div>
+      <div><div class="price-col">$${f.cash.toLocaleString()}</div><div class="price-sub">per person</div></div>
+      <div>${pts ? `<div class="price-col">${Math.round(pts / 1000)}k pts</div><div class="price-sub">${bestProgLabel} · ${cpp}¢/pt</div>` : '<div class="price-na">—</div>'}</div>
+      <div class="col-hide">${renderAvail(f)}</div>
+      <div><button class="book-btn" onclick="alert('Redirecting to ${f.airline} booking...')">Book →</button></div>
+    </div>`;
+  });
+
+  wrap.innerHTML = html;
+
+  const strip = document.getElementById('summaryStrip');
+  const cashPrices = flights.map(f => f.cash);
+  const ptsPrices = flights.map(f => bestPoints(f)).filter(Boolean);
+  strip.className = 'summary-strip visible';
+  strip.innerHTML = `
+    <div class="stat"><div class="stat-val">$${Math.min(...cashPrices).toLocaleString()}</div><div class="stat-lbl">Lowest cash</div></div>
+    <div class="stat"><div class="stat-val">${ptsPrices.length ? Math.round(Math.min(...ptsPrices) / 1000) + 'k' : '—'}</div><div class="stat-lbl">Fewest miles</div></div>
+    <div class="stat"><div class="stat-val">${flights.length}</div><div class="stat-lbl">Options found</div></div>
+    <div class="stat"><div class="stat-val">${flights.filter(f => f.stops === 'nonstop').length}</div><div class="stat-lbl">Nonstop</div></div>
+  `;
+}
+
+function doSearch() { initTabs(); renderResults(); }
+initTabs();
+renderResults();
+</script>
+</body>
+</html>
